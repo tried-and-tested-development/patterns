@@ -20,7 +20,7 @@ jobs:
         env:
           RUN_NUM: ${{ github.run_number }}
         run: |
-          echo "VALUE=v"$(($RUN_NUM+141)) >> "$GITHUB_OUTPUT"
+          echo "VALUE=v"$(($RUN_NUM)) >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
         with:
