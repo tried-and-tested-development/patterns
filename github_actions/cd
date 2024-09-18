@@ -1,0 +1,65 @@
+name: cd
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+
+  prepare-release:
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Create Version Number
+        id: version-number
+        env:
+          RUN_NUM: ${{ github.run_number }}
+        run: |
+          echo "VALUE=v"$(($RUN_NUM+141)) >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag
+
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11 #install the python needed
+
+      - name: install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r test_requirements.txt
+
+      - name: Run Python Tests
+        run: python -m unittest discover -v
+
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v4
+        with:
+          configuration: ".github/changelog.json"
+          fromTag: ${{ steps.get-latest-tag.outputs.tag }}
+          toTag: master
+          fetchViaCommits: true
+          fetchReviewers: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Draft Release ${{ steps.version-number.outputs.VALUE }}
+        id: draft-release
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          body: ${{ steps.github_release.outputs.changelog }}
+          makeLatest: true
+          draft: true
+          commit: master
+          tag: ${{ steps.version-number.outputs.VALUE }}
